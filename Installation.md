@@ -6,7 +6,7 @@ Assume pre-exsisting Homebrew installation
 
 # Create private Ehereum chain
 Follow http://adeduke.com/2015/08/how-to-create-a-private-ethereum-chain/
-
+* ```geth --genesis ethereumGenesisTest.json --datadir data --networkid 543 --nodiscover --maxpeers 0 console```
 
 
 * [Create genesis block](https://forum.ethereum.org/discussion/2757/genesis-block-in-private-network)
