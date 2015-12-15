@@ -1,0 +1,59 @@
+#!/bin/bash
+
+# Creates an Ethereum private test network with a set of pre-funded accounts
+# For TESTING PURPOSES ONLY
+# Pre-requisites:
+# jq JSON utility must be installed (brew install jq)
+
+# Network creation parameters
+DATADIR=data
+ACCOUNT_COUNT=3
+ACCOUNT_PASSWORD=password
+NETWORKID=7890
+
+GENESIS_FILE=$DATADIR/genesis.json
+
+# Generate a genesis block with an initial allocation for a set of accounts
+# Used to create private test networks
+# Usage: jq -s "$JQ_GENESIS" data/keystore/* > $GENESIS_FILE
+read -r -d '' JQ_GENESIS <<-'EOF'
+{
+	"nonce": "0xdeadbeefdeadbeef",
+	"timestamp": "0x0",
+	"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"extraData": "0x0",
+	"gasLimit": "0x8000000",
+	"difficulty": "0xb",
+	"mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"coinbase": "0x3333333333333333333333333333333333333333",
+	"alloc": (reduce .[].address as $address ({}; . + { 
+		($address): { "balance": "10000000000000000000"
+		}
+	}))
+}
+EOF
+
+
+if [ ! -d "$DATADIR" ]; then
+	echo "Ethereum private network directory $ETHEREUMDIR not found, creating new private network"
+
+	echo "Creating data directory $DATADIR"
+	mkdir $DATADIR
+	echo $ACCOUNT_PASSWORD > "$DATADIR/account_password"
+
+	echo "Creating $ACCOUNT_COUNT accounts..."
+	for ((i=0; i < $ACCOUNT_COUNT; i++)); do
+		geth -datadir "$DATADIR" --networkid $NETWORKID --maxpeers 0 --nodiscover --password "$DATADIR/account_password" account new
+	done
+
+	echo "Creating genesis block with initial allocation for all accounts"
+	jq -s "$JQ_GENESIS" "$DATADIR"/keystore/* > "$GENESIS_FILE"
+	#cat "$GENESIS_FILE"
+
+	echo "Bootstrapping genesis block into private network"
+	geth -datadir "$DATADIR" --networkid $NETWORKID --maxpeers 0 --nodiscover --genesis "$GENESIS_FILE" "$@"
+
+else
+	>&2 echo "Private Ethereum network exists. Running geth with supplied arguments..."
+	geth -datadir "$DATADIR" --networkid $NETWORKID --maxpeers 0 --nodiscover "$@"
+fi
